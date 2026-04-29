@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPA Office of Water - Compliance Report Portal</title>
+    <style>
+        :root {
+            --epa-blue: #0071bc;
+            --epa-dark: #205493;
+            --epa-green: #2e8540;
+            --epa-red: #e31c3d;
+            --epa-yellow: #fdb81e;
+            --epa-gray: #5b616b;
+            --epa-light: #f1f1f1;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--epa-light); color: #212121; }
+
+        /* Header */
+        .header { background: var(--epa-dark); color: white; padding: 0; }
+        .header-top { background: #112e51; padding: 8px 24px; font-size: 13px; display: flex; justify-content: space-between; }
+        .header-main { padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+        .header-main img { height: 48px; }
+        .header-main h1 { font-size: 24px; font-weight: 700; }
+        .header-main .subtitle { font-size: 14px; opacity: 0.85; }
+
+        /* Nav tabs */
+        .nav-tabs { background: var(--epa-blue); display: flex; padding: 0 24px; }
+        .nav-tabs button { background: none; border: none; color: white; padding: 14px 24px; font-size: 15px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; }
+        .nav-tabs button.active { border-bottom-color: white; background: rgba(255,255,255,0.1); }
+        .nav-tabs button:hover { background: rgba(255,255,255,0.15); }
+
+        /* Main content */
+        .container { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+        .card { background: white; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); padding: 32px; margin-bottom: 24px; }
+        .card h2 { color: var(--epa-dark); margin-bottom: 16px; font-size: 22px; }
+        .card p.info { color: var(--epa-gray); margin-bottom: 24px; line-height: 1.6; }
+
+        /* Form */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #333; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px 12px; border: 1px solid #aeb0b5; border-radius: 3px; font-size: 15px;
+        }
+        .form-group textarea { height: 100px; resize: vertical; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        /* File drop zone */
+        .drop-zone {
+            border: 2px dashed #aeb0b5; border-radius: 6px; padding: 48px; text-align: center;
+            cursor: pointer; transition: all 0.2s; background: #fafafa;
+        }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--epa-blue); background: #e8f4fd; }
+        .drop-zone .icon { font-size: 48px; margin-bottom: 12px; }
+        .drop-zone p { color: var(--epa-gray); }
+        .drop-zone .filename { color: var(--epa-green); font-weight: 600; margin-top: 8px; }
+
+        /* Buttons */
+        .btn { padding: 12px 28px; border: none; border-radius: 3px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: var(--epa-blue); color: white; }
+        .btn-primary:hover { background: var(--epa-dark); }
+        .btn-primary:disabled { background: #aeb0b5; cursor: not-allowed; }
+        .btn-success { background: var(--epa-green); color: white; }
+        .btn-danger { background: var(--epa-red); color: white; }
+        .btn-warning { background: var(--epa-yellow); color: #333; }
+        .btn-sm { padding: 6px 14px; font-size: 13px; }
+
+        /* Progress */
+        .progress-bar { background: #dce4ef; border-radius: 4px; height: 8px; margin: 16px 0; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: var(--epa-blue); transition: width 0.5s; border-radius: 4px; }
+
+        /* Status badges */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+        .badge-flagged { background: #fce4e4; color: var(--epa-red); }
+        .badge-review { background: #fef0c7; color: #b45309; }
+        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-denied { background: #fce4e4; color: var(--epa-red); }
+
+        /* Review table */
+        .review-table { width: 100%; border-collapse: collapse; }
+        .review-table th { background: var(--epa-dark); color: white; padding: 12px 16px; text-align: left; font-size: 13px; text-transform: uppercase; }
+        .review-table td { padding: 12px 16px; border-bottom: 1px solid #ddd; font-size: 14px; }
+        .review-table tr:hover { background: #f5f5f5; cursor: pointer; }
+
+        /* Compliance checklist */
+        .compliance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+        .compliance-item { padding: 12px; border-radius: 4px; border-left: 4px solid #ddd; background: #fafafa; }
+        .compliance-item.compliant { border-left-color: var(--epa-green); }
+        .compliance-item.non-compliant { border-left-color: var(--epa-red); }
+        .compliance-item.needs-review { border-left-color: var(--epa-yellow); }
+        .compliance-item.insufficient { border-left-color: #aeb0b5; }
+        .compliance-item .label { font-weight: 600; font-size: 13px; }
+        .compliance-item .status { font-size: 12px; margin-top: 4px; }
+        .compliance-item .evidence { font-size: 12px; color: var(--epa-gray); margin-top: 4px; }
+
+        /* Risk meter */
+        .risk-meter { display: flex; align-items: center; gap: 16px; margin: 16px 0; }
+        .risk-meter .score { font-size: 48px; font-weight: 700; }
+        .risk-meter .score.low { color: var(--epa-green); }
+        .risk-meter .score.medium { color: var(--epa-yellow); }
+        .risk-meter .score.high { color: #e65100; }
+        .risk-meter .score.critical { color: var(--epa-red); }
+
+        /* Detail modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 40px; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; border-radius: 6px; width: 90%; max-width: 900px; max-height: 85vh; overflow-y: auto; padding: 32px; }
+        .modal h2 { margin-bottom: 16px; }
+        .modal-close { float: right; font-size: 24px; cursor: pointer; color: var(--epa-gray); background: none; border: none; }
+
+        .hidden { display: none; }
+        .status-msg { padding: 16px; border-radius: 4px; margin: 16px 0; }
+        .status-msg.success { background: #d1fae5; color: #065f46; }
+        .status-msg.error { background: #fce4e4; color: #991b1b; }
+        .status-msg.info { background: #dbeafe; color: #1e40af; }
+
+        /* API config banner */
+        .api-banner { background: #fff3cd; border: 1px solid #ffc107; padding: 12px 24px; border-radius: 4px; margin-bottom: 24px; }
+        .api-banner input { width: 60%; padding: 6px 10px; margin: 0 8px; border: 1px solid #aeb0b5; border-radius: 3px; }
+
+        .footer { text-align: center; padding: 32px; color: var(--epa-gray); font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="header-top">
+        <span>United States Environmental Protection Agency</span>
+        <span>Office of Water</span>
+    </div>
+    <div class="header-main">
+        <div>
+            <h1>&#127758; EPA Compliance Report Portal</h1>
+            <div class="subtitle">Citizen Compliance Report Submission &amp; AI-Powered Review System</div>
+        </div>
+    </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+    <button class="active" onclick="showTab('submit', this)">&#128196; Submit Report</button>
+    <button onclick="showTab('review', this)">&#128269; Review Dashboard</button>
+    <button onclick="showTab('about', this)">&#8505;&#65039; Compliance Rules</button>
+</div>
+
+<!-- API CONFIG -->
+<div class="container">
+    <div class="api-banner">
+        <strong>&#9881;&#65039; API Endpoint:</strong>
+        <input type="text" id="apiUrl" placeholder="https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/prod" />
+        <button class="btn btn-sm btn-primary" onclick="saveApiUrl()">Save</button>
+        <span style="font-size:12px; color:#666;"> &#8592; Paste your API Gateway URL from CloudFormation Outputs</span>
+    </div>
+</div>
+
+<!-- ==================== SUBMIT TAB ==================== -->
+<div id="tab-submit" class="container">
+    <div class="card">
+        <h2>Submit Environmental Compliance Report</h2>
+        <p class="info">
+            Citizens and facilities can submit compliance reports related to environmental regulations
+            under the Clean Water Act, Safe Drinking Water Act, and EPA Office of Water programs.
+            Uploaded documents will be automatically reviewed by AI against 18 EPA compliance checkpoints,
+            then forwarded to EPA engineers for final review.
+        </p>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Your Name *</label>
+                <input type="text" id="submitterName" placeholder="Jane Smith" required />
+            </div>
+            <div class="form-group">
+                <label>Email Address *</label>
+                <input type="email" id="submitterEmail" placeholder="jane@example.com" required />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Facility Name</label>
+                <input type="text" id="facilityName" placeholder="ABC Water Treatment Plant" />
+            </div>
+            <div class="form-group">
+                <label>Report Type</label>
+                <select id="reportType">
+                    <option value="discharge_monitoring">Discharge Monitoring Report (DMR)</option>
+                    <option value="water_quality">Water Quality Report</option>
+                    <option value="spill_incident">Spill / Incident Report</option>
+                    <option value="permit_compliance">Permit Compliance Report</option>
+                    <option value="stormwater">Stormwater Management Plan</option>
+                    <option value="pretreatment">Pretreatment Compliance Report</option>
+                    <option value="drinking_water">Drinking Water Quality Report</option>
+                    <option value="general">General Compliance Report</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="description" placeholder="Briefly describe the report contents and any concerns..."></textarea>
+        </div>
+
+        <!-- File Upload -->
+        <div class="form-group">
+            <label>Upload Document (PDF, DOCX, TXT, CSV)</label>
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div class="icon">&#128195;</div>
+                <p>Drag &amp; drop your file here, or <strong>click to browse</strong></p>
+                <p style="font-size:12px; margin-top:8px;">(Max 10 MB &bull; PDF, DOCX, TXT, CSV)</p>
+                <div class="filename" id="selectedFile"></div>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.csv" style="display:none" onchange="handleFileSelect(event)" />
+        </div>
+
+        <button class="btn btn-primary" id="submitBtn" onclick="submitReport()" disabled>
+            Submit Report for AI Review
+        </button>
+
+        <div id="submitStatus"></div>
+
+        <!-- Progress area -->
+        <div id="progressArea" class="hidden" style="margin-top: 24px;">
+            <h3>Processing your report...</h3>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+            <p id="progressText">Uploading document...</p>
+        </div>
+
+        <!-- Results area -->
+        <div id="resultArea" class="hidden" style="margin-top: 24px;"></div>
+    </div>
+</div>
+
+<!-- ==================== REVIEW DASHBOARD TAB ==================== -->
+<div id="tab-review" class="container hidden">
+    <div class="card">
+        <h2>&#128269; Engineer Review Dashboard</h2>
+        <p class="info">Reports flagged by AI compliance analysis appear below. Review the AI findings, then Approve, Deny, or Escalate each report.</p>
+
+        <div style="display:flex; gap:12px; margin-bottom:16px;">
+            <button class="btn btn-sm btn-danger" onclick="loadReports('FLAGGED_FOR_REVIEW')">&#128308; Flagged</button>
+            <button class="btn btn-sm btn-warning" onclick="loadReports('NEEDS_REVIEW')">&#128992; Needs Review</button>
+            <button class="btn btn-sm btn-success" onclick="loadReports('AI_APPROVED')">&#128994; AI Approved</button>
+            <button class="btn btn-sm btn-primary" onclick="loadReports('ALL')">All Reports</button>
+        </div>
+
+        <table class="review-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Facility</th>
+                    <th>Report Type</th>
+                    <th>Submitter</th>
+                    <th>Risk Score</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="reviewTableBody">
+                <tr><td colspan="7" style="text-align:center; color:#999; padding:32px;">Click a filter above to load reports</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ==================== COMPLIANCE RULES TAB ==================== -->
+<div id="tab-about" class="container hidden">
+    <div class="card">
+        <h2>&#9989; EPA Compliance Checks Performed by AI</h2>
+        <p class="info">
+            Every submitted document is analyzed by Amazon Bedrock (Mistral AI) against the following
+            18 compliance checkpoints based on
+            <a href="https://www.epa.gov/compliance/monitoring-compliance" target="_blank">EPA Compliance Monitoring</a> regulations.
+        </p>
+
+        <h3 style="color:var(--epa-dark); margin:16px 0 8px;">&#127754; Clean Water Act (CWA)</h3>
+        <div class="compliance-grid">
+            <div class="compliance-item"><div class="label">1. NPDES Permit Compliance</div><div class="evidence">Discharge monitoring reports (DMRs), effluent limitations, permit conditions</div></div>
+            <div class="compliance-item"><div class="label">2. Water Quality Standards</div><div class="evidence">Pollutant concentrations vs. EPA water quality criteria</div></div>
+            <div class="compliance-item"><div class="label">3. Discharge Reporting</div><div class="evidence">Completeness of discharge monitoring data &amp; reporting frequency</div></div>
+            <div class="compliance-item"><div class="label">4. Pretreatment Standards</div><div class="evidence">Industrial pretreatment program compliance for indirect dischargers</div></div>
+        </div>
+
+        <h3 style="color:var(--epa-dark); margin:16px 0 8px;">&#128167; Safe Drinking Water Act (SDWA)</h3>
+        <div class="compliance-grid">
+            <div class="compliance-item"><div class="label">5. Maximum Contaminant Levels (MCLs)</div><div class="evidence">Reported contaminant levels vs. EPA MCL standards</div></div>
+            <div class="compliance-item"><div class="label">6. Monitoring &amp; Reporting</div><div class="evidence">Required monitoring schedules &amp; public notification requirements</div></div>
+            <div class="compliance-item"><div class="label">7. Treatment Techniques</div><div class="evidence">Compliance with required treatment technologies</div></div>
+        </div>
+
+        <h3 style="color:var(--epa-dark); margin:16px 0 8px;">&#128684; Effluent &amp; Discharge</h3>
+        <div class="compliance-grid">
+            <div class="compliance-item"><div class="label">8. Effluent Limitation Guidelines (ELGs)</div><div class="evidence">Industry-specific effluent limits</div></div>
+            <div class="compliance-item"><div class="label">9. TMDL Compliance</div><div class="evidence">Total Maximum Daily Load allocations</div></div>
+            <div class="compliance-item"><div class="label">10. Stormwater Management</div><div class="evidence">Stormwater pollution prevention plan (SWPPP) compliance</div></div>
+        </div>
+
+        <h3 style="color:var(--epa-dark); margin:16px 0 8px;">&#127981; Facility &amp; Operations</h3>
+        <div class="compliance-grid">
+            <div class="compliance-item"><div class="label">11. Record Keeping</div><div class="evidence">Required records maintained and accessible per inspection</div></div>
+            <div class="compliance-item"><div class="label">12. Self-Monitoring Data</div><div class="evidence">Facility self-monitoring data completeness &amp; accuracy</div></div>
+            <div class="compliance-item"><div class="label">13. Spill Prevention (SPCC)</div><div class="evidence">Spill Prevention, Control &amp; Countermeasure plan compliance</div></div>
+            <div class="compliance-item"><div class="label">14. Best Management Practices</div><div class="evidence">Implementation of required BMPs</div></div>
+        </div>
+
+        <h3 style="color:var(--epa-dark); margin:16px 0 8px;">&#128200; Reporting &amp; Transparency</h3>
+        <div class="compliance-grid">
+            <div class="compliance-item"><div class="label">15. Timely Reporting</div><div class="evidence">Reports submitted within regulatory deadlines</div></div>
+            <div class="compliance-item"><div class="label">16. Data Accuracy</div><div class="evidence">Inconsistencies, anomalies, or suspicious data patterns</div></div>
+            <div class="compliance-item"><div class="label">17. Public Notification</div><div class="evidence">Compliance with public notification requirements</div></div>
+            <div class="compliance-item"><div class="label">18. Corrective Actions</div><div class="evidence">Corrective action plans for prior violations</div></div>
+        </div>
+
+        <div style="margin-top:24px; padding:16px; background:#e8f5e9; border-radius:4px;">
+            <h3>How AI Flagging Works</h3>
+            <ul style="margin:8px 0 0 20px; line-height:1.8;">
+                <li><strong>Risk Score &gt; 70</strong> or <strong>Priority URGENT/CRITICAL</strong> &rarr; <span class="badge badge-flagged">FLAGGED FOR REVIEW</span></li>
+                <li><strong>Risk Score 41-70</strong> or <strong>Priority ELEVATED</strong> &rarr; <span class="badge badge-review">NEEDS REVIEW</span></li>
+                <li><strong>Risk Score &le; 40</strong> and <strong>Priority ROUTINE</strong> &rarr; <span class="badge badge-approved">AI APPROVED</span></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== DETAIL MODAL ==================== -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<div class="footer">
+    EPA Compliance Report Portal &bull; Powered by Amazon Bedrock (Mistral AI) &bull; Demo System
+</div>
+
+<script>
+// ==================== CONFIG ====================
+let API_URL = '';
+try {
+    API_URL = localStorage.getItem('epa_api_url') || '';
+} catch(e) {}
+document.getElementById('apiUrl').value = API_URL;
+
+function saveApiUrl() {
+    API_URL = document.getElementById('apiUrl').value.replace(/\/$/, '');
+    try { localStorage.setItem('epa_api_url', API_URL); } catch(e) {}
+    alert('API URL saved!');
+}
+
+let selectedFile = null;
+
+// ==================== TAB NAVIGATION ====================
+function showTab(tab, btn) {
+    document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.add('hidden'));
+    document.getElementById('tab-' + tab).classList.remove('hidden');
+    document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    if (tab === 'review') loadReports('ALL');
+}
+
+// ==================== FILE HANDLING ====================
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+        selectedFile = e.dataTransfer.files[0];
+        document.getElementById('selectedFile').textContent = '✓ ' + selectedFile.name;
+        document.getElementById('submitBtn').disabled = false;
+    }
+});
+
+function handleFileSelect(e) {
+    selectedFile = e.target.files[0];
+    if (selectedFile) {
+        document.getElementById('selectedFile').textContent = '✓ ' + selectedFile.name;
+        document.getElementById('submitBtn').disabled = false;
+    }
+}
+
+// ==================== SUBMIT REPORT ====================
+async function submitReport() {
+    if (!API_URL) { alert('Please set your API URL first!'); return; }
+    if (!selectedFile) { alert('Please select a file!'); return; }
+
+    const progressArea = document.getElementById('progressArea');
+    const resultArea = document.getElementById('resultArea');
+    progressArea.classList.remove('hidden');
+    resultArea.classList.add('hidden');
+
+    try {
+        // Step 1: Get presigned upload URL
+        updateProgress(20, 'Requesting upload URL...');
+        const uploadResp = await fetch(API_URL + '/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fileName: selectedFile.name,
+                fileType: selectedFile.type || 'application/pdf',
+                submitterName: document.getElementById('submitterName').value,
+                submitterEmail: document.getElementById('submitterEmail').value,
+                facilityName: document.getElementById('facilityName').value,
+                reportType: document.getElementById('reportType').value,
+                description: document.getElementById('description').value
+            })
+        });
+        const uploadData = await uploadResp.json();
+
+        // Step 2: Upload file to S3 via presigned URL
+        updateProgress(40, 'Uploading document to S3...');
+        await fetch(uploadData.uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': selectedFile.type || 'application/pdf' },
+            body: selectedFile
+        });
+
+        // Step 3: Trigger AI analysis
+        updateProgress(60, 'Running AI compliance analysis (Mistral via Bedrock)...');
+        const analyzeResp = await fetch(API_URL + '/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reportId: uploadData.reportId })
+        });
+        const analyzeData = await analyzeResp.json();
+
+        // Step 4: Show results
+        updateProgress(100, 'Analysis complete!');
+        showResults(analyzeData);
+
+    } catch (err) {
+        resultArea.classList.remove('hidden');
+        resultArea.innerHTML = '<div class="status-msg error">Error: ' + err.message + '</div>';
+    }
+}
+
+function updateProgress(pct, text) {
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressText').textContent = text;
+}
+
+function showResults(data) {
+    const resultArea = document.getElementById('resultArea');
+    resultArea.classList.remove('hidden');
+
+    const riskClass = data.riskScore > 70 ? 'critical' : data.riskScore > 40 ? 'high' : data.riskScore > 20 ? 'medium' : 'low';
+    const statusBadge = data.status === 'FLAGGED_FOR_REVIEW' ? 'badge-flagged' :
+                        data.status === 'NEEDS_REVIEW' ? 'badge-review' : 'badge-approved';
+
+    let html = '<div class="card">';
+    html += '<h2>&#9989; Analysis Complete</h2>';
+    html += '<div class="risk-meter">';
+    html += '<div class="score ' + riskClass + '">' + (data.riskScore || '?') + '</div>';
+    html += '<div><div style="font-size:18px;font-weight:600;">Risk Score</div>';
+    html += '<span class="badge ' + statusBadge + '">' + data.status + '</span> ';
+    html += '<span class="badge" style="background:#e8e8e8;">' + (data.priority || 'N/A') + '</span></div>';
+    html += '</div>';
+
+    if (data.analysis && data.analysis.summary) {
+        html += '<p style="margin:16px 0; line-height:1.6;">' + data.analysis.summary + '</p>';
+    }
+
+    if (data.analysis && data.analysis.key_violations && data.analysis.key_violations.length) {
+        html += '<h3 style="color:var(--epa-red); margin:16px 0 8px;">Key Violations Found</h3><ul>';
+        data.analysis.key_violations.forEach(v => { html += '<li style="margin:4px 0;">' + v + '</li>'; });
+        html += '</ul>';
+    }
+
+    html += '<p style="margin-top:16px; color:var(--epa-gray);">Report ID: <code>' + data.reportId + '</code></p>';
+    html += '</div>';
+    resultArea.innerHTML = html;
+}
+
+// ==================== REVIEW DASHBOARD ====================
+async function loadReports(status) {
+    if (!API_URL) { alert('Please set your API URL first!'); return; }
+    const tbody = document.getElementById('reviewTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;">Loading...</td></tr>';
+
+    try {
+        const resp = await fetch(API_URL + '/review?status=' + status);
+        const data = await resp.json();
+        const reports = data.reports || [];
+
+        if (!reports.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#999;">No reports found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = reports.map(r => {
+            const riskScore = r.riskScore || r.aiReview?.overall_risk_score || '?';
+            const badgeClass = r.status === 'FLAGGED_FOR_REVIEW' ? 'badge-flagged' :
+                              r.status === 'NEEDS_REVIEW' ? 'badge-review' :
+                              r.status?.startsWith('HUMAN_APPROVED') ? 'badge-approved' :
+                              r.status?.startsWith('HUMAN_DENIED') ? 'badge-denied' : 'badge-review';
+            return '<tr onclick="viewReport(\'' + r.reportId + '\')">' +
+                '<td>' + (r.submittedAt || '').substring(0, 10) + '</td>' +
+                '<td>' + (r.facilityName || 'N/A') + '</td>' +
+                '<td>' + (r.reportType || 'general') + '</td>' +
+                '<td>' + (r.submitterName || 'Anonymous') + '</td>' +
+                '<td style="font-weight:700;">' + riskScore + '</td>' +
+                '<td><span class="badge ' + badgeClass + '">' + (r.status || '?') + '</span></td>' +
+                '<td><button class="btn btn-sm btn-primary" onclick="event.stopPropagation();viewReport(\'' + r.reportId + '\')">Review</button></td>' +
+                '</tr>';
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" style="color:red;">Error: ' + err.message + '</td></tr>';
+    }
+}
+
+async function viewReport(reportId) {
+    try {
+        const resp = await fetch(API_URL + '/review?reportId=' + reportId);
+        const data = await resp.json();
+        const r = data.report;
+        if (!r) return;
+
+        const ai = r.aiReview || {};
+        let html = '<h2>Report: ' + (r.facilityName || r.fileName) + '</h2>';
+        html += '<p><strong>Submitter:</strong> ' + r.submitterName + ' (' + r.submitterEmail + ')<br>';
+        html += '<strong>Submitted:</strong> ' + r.submittedAt + '<br>';
+        html += '<strong>Type:</strong> ' + r.reportType + '<br>';
+        html += '<strong>File:</strong> ' + r.fileName + '</p>';
+
+        // Risk score
+        const riskScore = ai.overall_risk_score || '?';
+        const riskClass = riskScore > 70 ? 'critical' : riskScore > 40 ? 'high' : riskScore > 20 ? 'medium' : 'low';
+        html += '<div class="risk-meter"><div class="score ' + riskClass + '">' + riskScore + '</div>';
+        html += '<div><strong>Priority:</strong> ' + (ai.priority_flag || 'N/A') + '</div></div>';
+
+        if (ai.summary) html += '<p style="line-height:1.6;margin:16px 0;">' + ai.summary + '</p>';
+
+        // Compliance checklist items
+        const checks = ['NPDES_PERMIT','WATER_QUALITY_STANDARDS','DISCHARGE_REPORTING','PRETREATMENT_STANDARDS',
+            'MAX_CONTAMINANT_LEVELS','MONITORING_REPORTING','TREATMENT_TECHNIQUES','EFFLUENT_LIMITATIONS',
+            'TMDL_COMPLIANCE','STORMWATER_MGMT','RECORD_KEEPING','SELF_MONITORING','SPILL_PREVENTION',
+            'BEST_MGMT_PRACTICES','TIMELY_REPORTING','DATA_ACCURACY','PUBLIC_NOTIFICATION','CORRECTIVE_ACTIONS'];
+
+        html += '<h3 style="margin-top:20px;">Compliance Analysis</h3><div class="compliance-grid">';
+        checks.forEach((check, i) => {
+            const item = ai[check] || ai[(i+1).toString()] || {};
+            const status = (item.status || 'INSUFFICIENT_DATA').toLowerCase().replace(/_/g, '-');
+            html += '<div class="compliance-item ' + status + '">';
+            html += '<div class="label">' + (i+1) + '. ' + check.replace(/_/g, ' ') + '</div>';
+            html += '<div class="status">' + (item.status || 'N/A') + ' — Risk: ' + (item.risk_level || 'N/A') + '</div>';
+            if (item.evidence) html += '<div class="evidence">' + item.evidence + '</div>';
+            html += '</div>';
+        });
+        html += '</div>';
+
+        // Violations
+        if (ai.key_violations && ai.key_violations.length) {
+            html += '<h3 style="color:var(--epa-red); margin-top:16px;">Key Violations</h3><ul>';
+            ai.key_violations.forEach(v => { html += '<li>' + v + '</li>'; });
+            html += '</ul>';
+        }
+
+        // Reviewer action buttons
+        if (!r.status?.startsWith('HUMAN_')) {
+            html += '<div style="margin-top:24px; padding-top:16px; border-top:2px solid #ddd;">';
+            html += '<h3>Reviewer Decision</h3>';
+            html += '<div class="form-group"><label>Reviewer Name</label><input type="text" id="reviewerName" placeholder="Your name" /></div>';
+            html += '<div class="form-group"><label>Notes</label><textarea id="reviewerNotes" placeholder="Add review notes..."></textarea></div>';
+            html += '<div style="display:flex; gap:12px;">';
+            html += '<button class="btn btn-success" onclick="submitDecision(\'' + r.reportId + '\',\'APPROVED\')">&#9989; Approve</button>';
+            html += '<button class="btn btn-danger" onclick="submitDecision(\'' + r.reportId + '\',\'DENIED\')">&#10060; Deny</button>';
+            html += '<button class="btn btn-warning" onclick="submitDecision(\'' + r.reportId + '\',\'ESCALATED\')">&#9888;&#65039; Escalate</button>';
+            html += '</div></div>';
+        } else {
+            html += '<div class="status-msg success">Decision: <strong>' + r.humanReview?.decision + '</strong> by ' + r.humanReview?.reviewerName + '</div>';
+        }
+
+        document.getElementById('modalContent').innerHTML = html;
+        document.getElementById('detailModal').classList.add('active');
+    } catch (err) {
+        alert('Error loading report: ' + err.message);
+    }
+}
+
+async function submitDecision(reportId, decision) {
+    try {
+        await fetch(API_URL + '/review', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                reportId,
+                decision,
+                reviewerName: document.getElementById('reviewerName')?.value || 'Reviewer',
+                notes: document.getElementById('reviewerNotes')?.value || ''
+            })
+        });
+        closeModal();
+        loadReports('ALL');
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+function closeModal() { document.getElementById('detailModal').classList.remove('active'); }
+</script>
+</body>
+</html>
