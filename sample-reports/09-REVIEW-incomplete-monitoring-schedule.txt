@@ -1,0 +1,21 @@
+WATER QUALITY MONITORING REPORT
+Facility: Hilltop Drinking Water System
+PWS ID: OH2240012
+Report Period: Q4 2025
+
+MONITORING RESULTS (Partial):
+Contaminant          | MCL Standard | Result    | Status
+Total Coliform       | 5% positive  | 2%        | Compliant
+Nitrate              | 10 mg/L      | 6.8 mg/L  | Compliant
+Fluoride             | 4.0 mg/L     | 1.2 mg/L  | Compliant
+Disinfection Byproducts (TTHMs) | 0.080 mg/L | NOT TESTED | MISSING
+Haloacetic Acids (HAA5)         | 0.060 mg/L | NOT TESTED | MISSING
+Lead and Copper Rule | varies       | NOT TESTED | MISSING
+
+NOTE: Quarterly TTHM and HAA5 monitoring was not conducted due to
+budget constraints. The facility serves 4,200 residents.
+Lead and copper sampling due in Q4 was deferred to Q1 2026.
+
+Public notification of monitoring gaps was NOT issued.
+All other tested parameters are within compliance limits.
+Treatment systems are operational and properly maintained.

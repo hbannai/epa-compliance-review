@@ -1,0 +1,29 @@
+SANITARY SEWER OVERFLOW (SSO) EVENT REPORT
+Utility: Riverside Municipal Sewer Authority
+NPDES Permit #: PA0034567
+Event Date: March 15, 2026
+Duration: 6 hours (2:00 AM - 8:00 AM)
+
+OVERFLOW DETAILS:
+Location: Manhole #MH-247, Cedar Avenue at 5th Street
+Cause: Heavy rainfall event (3.2 inches in 4 hours) combined with
+       partially blocked sewer main (grease accumulation)
+Volume: Estimated 28,000 gallons of diluted raw sewage
+Receiving Water: Cedar Creek (no body contact recreation designation)
+
+RESPONSE TIMELINE:
+- 2:15 AM: Overflow detected by SCADA alarm
+- 2:45 AM: Crew dispatched
+- 3:30 AM: Temporary bypass pump installed
+- 6:00 AM: Blockage cleared via hydro-jetting
+- 8:00 AM: Overflow ceased, area sanitized
+- 8:30 AM: State agency notified (required within 24 hrs ✓)
+- 9:00 AM: Public notice posted at overflow location ✓
+
+CORRECTIVE ACTIONS:
+- Grease trap inspection program accelerated for upstream restaurants
+- CCTV inspection of sewer main scheduled for April 2026
+- Capital improvement project for Cedar Ave capacity upgrade ($1.2M) in design phase
+
+PRIOR SSOs: 2 events in previous 12 months at different locations.
+Consent Order CO-2025-009 requires long-term control plan by June 2026.

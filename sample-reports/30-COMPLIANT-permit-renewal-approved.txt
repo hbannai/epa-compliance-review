@@ -1,0 +1,32 @@
+NPDES PERMIT RENEWAL - COMPLIANCE CERTIFICATION
+Facility: Valley Creek Regional WWTP
+Old Permit #: KY0056789 (Issued 2019, Expired March 2024)
+New Permit #: KY0056789-R1 (Issued March 15, 2026)
+Effective Date: April 1, 2026
+
+PERMIT RENEWAL SUMMARY:
+The Kentucky Division of Water has completed review and issued the
+renewed NPDES permit incorporating the following updates:
+
+NEW REQUIREMENTS ADDED:
+- Total Nitrogen limit: 8.0 mg/L monthly average (new)
+- Total Phosphorus limit: 1.0 mg/L monthly average (new)
+- Whole Effluent Toxicity testing: quarterly (was annual)
+- Electronic DMR reporting via NetDMR (was paper)
+- Nutrient monitoring for TMDL development: monthly
+
+COMPLIANCE STATUS UNDER PREVIOUS PERMIT:
+- Zero violations in final 36 months of permit term
+- All DMRs submitted on time
+- All monitoring conducted per schedule
+- FCE inspection (Jan 2026): full compliance
+- No pending enforcement actions
+
+FACILITY READINESS FOR NEW LIMITS:
+- BNR system upgraded 2024 — currently achieving 4.5 mg/L TN, 0.4 mg/L TP
+- NetDMR enrollment completed February 2026
+- Staff trained on new monitoring requirements March 2026
+- Updated monitoring plan submitted and approved
+
+Facility is fully prepared to comply with all new permit conditions
+effective April 1, 2026.

@@ -1,0 +1,25 @@
+WATER REUSE PROGRAM ANNUAL REPORT
+Facility: Suncoast Advanced Water Reclamation Facility
+NPDES Permit #: FL0091234
+Report Year: 2025
+
+RECLAIMED WATER QUALITY:
+Parameter              | Permit Limit | Annual Avg | Status
+CBOD5                  | 20 mg/L      | 2.1 mg/L   | COMPLIANT
+TSS                    | 5.0 mg/L     | 1.2 mg/L   | COMPLIANT
+Total Nitrogen         | 10 mg/L      | 3.8 mg/L   | COMPLIANT
+Total Phosphorus       | 3 mg/L       | 0.9 mg/L   | COMPLIANT
+Fecal Coliform         | 25/100mL     | ND         | COMPLIANT
+Turbidity              | 2 NTU        | 0.3 NTU    | COMPLIANT
+Total Chlorine Residual| 1-5 mg/L     | 2.8 mg/L   | COMPLIANT
+
+REUSE DISTRIBUTION:
+- Residential irrigation: 2.8 MGD (450 connections)
+- Golf course irrigation: 1.2 MGD (2 courses)
+- Industrial cooling: 0.5 MGD (1 facility)
+- Wetland augmentation: 0.3 MGD (permitted environmental use)
+Total reuse: 4.8 MGD (60% of total plant flow)
+
+Cross-connection control program: 847 inspections, 0 violations.
+Public education program: Active, 12 community events in 2025.
+All monitoring, reporting, and record-keeping requirements met.

@@ -1,0 +1,29 @@
+SPCC PLAN REVIEW AND CERTIFICATION
+Facility: Northern Valley Power Plant
+EPA Facility ID: NVP-2024-001
+Plan Prepared By: Environmental Compliance Associates, PE
+Certification Date: January 15, 2026
+Next Review Due: January 15, 2031
+
+STORAGE INVENTORY:
+Tank ID | Contents      | Capacity  | Secondary Containment | Status
+T-1     | Diesel Fuel   | 50,000gal | Concrete dike (110%)  | ✓ Intact
+T-2     | Diesel Fuel   | 50,000gal | Concrete dike (110%)  | ✓ Intact
+T-3     | Lube Oil      | 10,000gal | Steel pan (115%)      | ✓ Intact
+T-4     | Transformer Oil| 5,000gal | Concrete vault (120%) | ✓ Intact
+Drums   | Various       | 2,500gal  | Covered storage w/sump| ✓ Intact
+
+TOTAL ABOVEGROUND STORAGE: 117,500 gallons
+
+INTEGRITY TESTING:
+- All tanks inspected per API 653 — next inspection 2028
+- Cathodic protection system — tested annually, functioning
+- Overfill protection — high level alarms tested quarterly
+- Secondary containment — integrity verified, no cracks or damage
+
+SPILL HISTORY: Zero spills in past 5 years.
+DRILL FREQUENCY: Quarterly spill response drills conducted.
+Last drill: December 12, 2025 — all objectives met.
+
+NEAREST NAVIGABLE WATER: Shenandoah River (0.8 miles)
+PLAN DISTRIBUTION: Copies at gate house, control room, and EPA Region 3.

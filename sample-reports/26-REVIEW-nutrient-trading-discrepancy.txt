@@ -1,0 +1,33 @@
+NUTRIENT CREDIT TRADING ANNUAL REPORT
+Watershed: Chesapeake Bay Program
+Facility: Greenfield WWTP (Credit Seller)
+NPDES Permit #: VA0045678
+Trading Partner: Blue Ridge Development (Credit Buyer)
+Report Year: 2025
+
+CREDIT GENERATION:
+Permitted N Load:   15,000 lbs/yr
+Actual N Load:       9,200 lbs/yr
+Reduction:           5,800 lbs/yr
+Credits Generated:   5,800 nitrogen credits
+Credits Sold:        4,200 credits to Blue Ridge Development
+
+DISCREPANCY IDENTIFIED:
+Virginia DEQ audit found that flow meter used for load calculations
+was reading 12% LOW compared to calibration standard.
+
+ADJUSTED CALCULATIONS:
+Corrected Actual N Load:  10,304 lbs/yr (was 9,200)
+Corrected Reduction:       4,696 lbs/yr (was 5,800)
+Credits that should have been generated: 4,696 (not 5,800)
+
+IMPACT: 1,104 excess credits were sold. Blue Ridge Development
+used these credits to offset new construction discharge.
+Net environmental impact: 1,104 lbs of nitrogen NOT actually reduced.
+
+CORRECTIVE ACTIONS PROPOSED:
+- Flow meter recalibrated immediately (March 2026)
+- Credit reconciliation with trading program by Q2 2026
+- Blue Ridge Development notified of credit shortfall
+
+All other monitoring data and records are properly maintained.

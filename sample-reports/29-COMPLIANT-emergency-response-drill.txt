@@ -1,0 +1,33 @@
+EMERGENCY RESPONSE DRILL REPORT
+Facility: Harbor Point Water Treatment Plant
+PWS ID: MA2450089
+Drill Date: February 20, 2026
+Drill Type: Full-Scale Contamination Response Exercise
+
+SCENARIO: Simulated intentional contamination of raw water intake
+with unknown chemical agent. Discovery via online monitoring alarm.
+
+RESPONSE TIMELINE:
+00:00 - Online analyzer alarm triggered (simulated)
+00:03 - Operator acknowledged, initiated Emergency Response Plan
+00:05 - Raw water intake CLOSED
+00:08 - Incident Commander designated, ICS activated
+00:12 - State DWP and EPA notified
+00:15 - Local fire/hazmat dispatched
+00:18 - Public notification system activated (reverse 911)
+00:22 - Alternative water supply coordinated (mutual aid)
+00:30 - Sample collection for laboratory analysis initiated
+00:45 - Preliminary "all clear" from hazmat team
+01:00 - Controlled intake reopening with enhanced monitoring
+
+ALL OBJECTIVES MET:
+✓ Detection within 5 minutes
+✓ Intake closure within 10 minutes
+✓ ICS activation within 10 minutes
+✓ State/EPA notification within 15 minutes
+✓ Public notification within 20 minutes
+✓ Alternative supply within 30 minutes
+
+24 staff participated. After-action review completed March 1, 2026.
+Corrective actions: Update contact list (2 numbers changed). No other gaps.
+Emergency Response Plan certified current as of drill date.

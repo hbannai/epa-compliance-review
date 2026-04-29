@@ -1,0 +1,26 @@
+SPILL INCIDENT REPORT
+Facility: Lakeshore Petroleum Storage Terminal
+Date of Spill: March 5, 2026
+Substance: No. 2 Fuel Oil
+Volume Released: Approximately 8,500 gallons
+
+DETAILS:
+A corroded underground storage tank (UST-7, installed 1985) failed,
+releasing approximately 8,500 gallons of No. 2 fuel oil into the
+surrounding soil. Contamination has reached the groundwater table
+at 12 feet below grade. The facility is located 300 feet from
+Lake Marion, a public drinking water source.
+
+SPCC PLAN STATUS:
+- The facility does NOT have a current SPCC plan.
+- Last SPCC plan was prepared in 2008 and never updated.
+- No secondary containment exists for UST-7.
+- Facility never conducted integrity testing on the 41-year-old tank.
+
+RESPONSE:
+- Spill was discovered by a neighboring property owner, not facility staff.
+- Facility did not report the spill — it was reported by the neighbor.
+- EPA notification occurred 72 hours after discovery (required: immediate).
+- No cleanup contractor has been engaged as of report date.
+
+PRIOR VIOLATIONS: 3 previous spill violations in 2020, 2022, 2024.

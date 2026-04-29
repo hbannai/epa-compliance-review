@@ -1,0 +1,24 @@
+TMDL COMPLIANCE REPORT
+Watershed: Chesapeake Bay — Patuxent River Sub-basin
+Facility: Laurel Heights WWTP
+NPDES Permit #: MD0056789
+Report Period: Annual 2025
+
+TMDL ALLOCATION vs ACTUAL DISCHARGE:
+Parameter         | TMDL Allocation | Actual Load | Status
+Total Nitrogen    | 12,500 lbs/yr   | 13,200 lbs/yr | 5.6% OVER allocation
+Total Phosphorus  | 1,800 lbs/yr    | 1,750 lbs/yr  | Compliant
+Sediment (TSS)    | 85,000 lbs/yr   | 82,000 lbs/yr | Compliant
+
+EXPLANATION: Nitrogen exceedance attributed to unusually high wet weather
+flows in September-November 2025 (140% of average rainfall).
+Facility operated within design capacity throughout the year.
+BNR (Biological Nutrient Removal) system operated at 92% efficiency.
+
+CORRECTIVE ACTIONS PROPOSED:
+- Optimize BNR process to target 95% nitrogen removal
+- Install supplemental carbon feed system by Q3 2026
+- Implement wet weather flow equalization ($2.1M project approved)
+
+Facility has been in compliance for previous 3 years.
+All records are maintained and available for inspection.

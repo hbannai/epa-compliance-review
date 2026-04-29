@@ -1,0 +1,20 @@
+DRINKING WATER QUALITY REPORT
+Facility: Greenfield Municipal Water Authority
+PWS ID: VA1120045
+Report Date: March 2026
+
+CONTAMINANT TEST RESULTS:
+Contaminant          | MCL Standard | Result    | Status
+E. coli              | 0 positive   | POSITIVE  | CRITICAL VIOLATION
+Total Coliform       | 5% positive  | 12%       | VIOLATION
+Nitrate              | 10 mg/L      | 14.2 mg/L | VIOLATION
+Arsenic              | 0.010 mg/L   | 0.008 mg/L| Compliant
+Lead (90th %)        | 0.015 mg/L   | 0.019 mg/L| VIOLATION
+Turbidity            | 1 NTU        | 3.8 NTU   | VIOLATION
+
+PUBLIC NOTIFICATION: NOT ISSUED (Required within 24 hours for E. coli)
+TREATMENT SYSTEM: UV disinfection system has been offline since Feb 18, 2026.
+Facility has not reported this to the state drinking water program.
+Boil water advisory has NOT been issued despite E. coli positive result.
+
+MONITORING: Monthly monitoring for January was not conducted. Records missing.

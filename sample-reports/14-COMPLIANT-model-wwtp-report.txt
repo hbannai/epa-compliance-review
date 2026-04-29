@@ -1,0 +1,23 @@
+DISCHARGE MONITORING REPORT (DMR)
+Facility: Oakville Regional Water Reclamation Facility
+NPDES Permit #: NC0078901
+Reporting Period: January 2026 - March 2026
+Submitted: April 10, 2026 (Due: April 28, 2026) — ON TIME
+
+EFFLUENT MONITORING DATA:
+Parameter               | Permit Limit | Monthly Avg | Daily Max | Status
+BOD5                    | 30 mg/L      | 8.2 mg/L    | 12.1 mg/L | COMPLIANT
+Total Suspended Solids  | 30 mg/L      | 6.5 mg/L    | 9.8 mg/L  | COMPLIANT
+Total Nitrogen          | 8.0 mg/L     | 4.2 mg/L    | 5.8 mg/L  | COMPLIANT
+Total Phosphorus        | 1.0 mg/L     | 0.35 mg/L   | 0.48 mg/L | COMPLIANT
+Ammonia Nitrogen        | 2.0 mg/L     | 0.8 mg/L    | 1.2 mg/L  | COMPLIANT
+Fecal Coliform          | 200/100mL    | 12/100mL    | 45/100mL  | COMPLIANT
+Dissolved Oxygen        | > 5.0 mg/L   | 7.8 mg/L    | 6.5 mg/L  | COMPLIANT
+pH                      | 6.0-9.0      | 7.1         | 7.4       | COMPLIANT
+
+FLOW DATA: Average daily flow: 4.2 MGD (Design capacity: 8.0 MGD)
+
+ALL PARAMETERS WELL WITHIN PERMIT LIMITS.
+All monitoring conducted per schedule. All records maintained.
+SPCC plan current (updated January 2026).
+Annual inspection completed — no deficiencies.

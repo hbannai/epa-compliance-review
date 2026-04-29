@@ -1,0 +1,29 @@
+LABORATORY COMPLIANCE AUDIT REPORT
+Facility: Clearview Water Treatment Plant
+PWS ID: FL3340078
+Audit Date: March 20, 2026
+
+LABORATORY CERTIFICATION STATUS:
+- EPA/State lab certification EXPIRED: January 31, 2026
+- Renewal application filed: February 15, 2026 (15 days late)
+- Certification currently LAPSED — awaiting state review
+
+SAMPLES ANALYZED DURING LAPSED PERIOD (Feb 1 - present):
+- 47 drinking water compliance samples analyzed in-house
+- Results reported to state as "certified" — INACCURATE
+- Includes: total coliform (12 samples), lead/copper (8),
+  disinfection byproducts (15), nitrate (12)
+
+QA/QC DURING LAPSED PERIOD:
+- Proficiency testing: PASSED (results received Feb 28)
+- Equipment calibration: CURRENT
+- Analyst certifications: CURRENT
+- Method validation: CURRENT
+- All analytical methods unchanged
+
+NOTE: All analytical capabilities remain intact. Only the
+administrative certification document has lapsed. No quality
+issues identified. Renewal expected within 2 weeks.
+
+All sample results during lapsed period are believed accurate
+based on QA/QC records, but may need to be re-certified.

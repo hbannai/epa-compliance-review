@@ -1,0 +1,27 @@
+INDUSTRIAL PRETREATMENT COMPLIANCE REPORT
+Facility: Atlas Electroplating Inc.
+SIU Permit #: IU-2024-0891
+POTW: Metro Wastewater Treatment Plant
+Reporting Period: Q1 2026
+
+MONITORING RESULTS:
+Parameter          | Daily Max Limit | Actual Max | Status
+Total Cyanide      | 0.65 mg/L       | 4.20 mg/L  | 546% OVER — CRITICAL
+Total Chromium     | 1.71 mg/L       | 3.85 mg/L  | 125% OVER
+Total Zinc         | 1.48 mg/L       | 2.90 mg/L  | 96% OVER
+Total Copper       | 2.07 mg/L       | 1.85 mg/L  | Compliant
+pH                 | 6.0-9.0         | 4.1        | VIOLATION
+
+CYANIDE EXCEEDANCE IMPACT: The POTW reported worker safety incident
+on Feb 22 due to hydrogen cyanide gas generation in the collection
+system traced to this facility's discharge.
+
+PRETREATMENT SYSTEM: Cyanide destruction system (alkaline chlorination)
+has been offline since January 15, 2026. Facility continued to
+discharge without treatment for 75 days.
+
+SELF-MONITORING: Facility failed to conduct required daily monitoring
+for 45 of 90 days in the reporting period.
+
+COMPLIANCE SCHEDULE: Facility is 8 months behind on corrective actions
+from the previous consent order (CO-2025-003).

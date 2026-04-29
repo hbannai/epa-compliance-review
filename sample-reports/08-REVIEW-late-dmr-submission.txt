@@ -1,0 +1,21 @@
+DISCHARGE MONITORING REPORT (DMR)
+Facility: Cedar Rapids Wastewater Treatment Plant
+NPDES Permit #: IA0034567
+Reporting Period: October 2025 - December 2025
+Submitted: April 2, 2026 (DUE: January 28, 2026)
+
+*** THIS REPORT WAS SUBMITTED 64 DAYS LATE ***
+
+EFFLUENT MONITORING DATA:
+Parameter               | Permit Limit | Actual Value | Status
+BOD5                    | 30 mg/L      | 27 mg/L      | Compliant
+Total Suspended Solids  | 30 mg/L      | 31 mg/L      | Minor exceedance
+Total Nitrogen          | 10 mg/L      | 9.5 mg/L     | Compliant
+Total Phosphorus        | 1.0 mg/L     | 0.9 mg/L     | Compliant
+Fecal Coliform          | 200/100mL    | 180/100mL    | Compliant
+pH                      | 6.0-9.0      | 7.2          | Compliant
+
+NOTES: Report submission was delayed due to staff turnover.
+New environmental compliance officer started February 15, 2026.
+All monitoring was conducted on schedule — only the report was late.
+Minor TSS exceedance (31 vs 30 mg/L) occurred on one sample date.

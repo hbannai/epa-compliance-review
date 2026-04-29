@@ -1,0 +1,27 @@
+DATA INTEGRITY INVESTIGATION REPORT
+Facility: Pacific Coast Refinery
+NPDES Permit #: CA0054892
+Investigation Date: February 2026
+
+FINDINGS:
+During routine record review, the following data integrity issues
+were identified:
+
+1. DUPLICATE ENTRIES: Identical BOD and TSS values reported for
+   12 consecutive days (Jan 5-16, 2026) — statistically impossible.
+   All values reported as exactly 18.5 mg/L BOD, 24.0 mg/L TSS.
+
+2. BACKDATED RECORDS: Laboratory analysis dates precede sample
+   collection dates for 8 samples in the January reporting period.
+
+3. MISSING CHAIN OF CUSTODY: No chain of custody documentation
+   exists for any samples collected in Q4 2025.
+
+4. CALIBRATION RECORDS: Flow meter calibration records show the
+   device was last calibrated in 2022 — 4 years overdue.
+
+5. OPERATOR TESTIMONY: Facility operator stated "we just copy last
+   month's numbers when the lab results don't come back in time."
+
+RECOMMENDATION: Refer to EPA Criminal Investigation Division.
+This constitutes potential falsification under 18 U.S.C. § 1001.

@@ -1,0 +1,28 @@
+THERMAL DISCHARGE MONITORING REPORT
+Facility: Lakeside Power Generation Station
+NPDES Permit #: TN0067890
+Reporting Period: February 2026
+
+COOLING WATER DISCHARGE DATA:
+Parameter              | Permit Limit  | Actual      | Status
+Discharge Temperature  | 90°F max      | 104°F       | EXCEEDS - 16% OVER
+Temperature Rise (ΔT)  | 5°F max above | 12°F above  | EXCEEDS - 140% OVER
+                       | ambient       | ambient     |
+Residual Chlorine      | 0.2 mg/L      | 0.45 mg/L   | EXCEEDS - 125% OVER
+Flow Volume            | 500 MGD       | 520 MGD     | EXCEEDS
+
+RECEIVING WATER IMPACT:
+Tennessee Wildlife Resources Agency reported fish kill event on Feb 18-19
+in receiving lake (Watts Bar Reservoir). Approximately 2,300 dead fish
+recovered, including state-managed sport species (largemouth bass,
+crappie, catfish).
+
+Dissolved oxygen in the thermal mixing zone measured at 3.1 mg/L
+(state standard: 5.0 mg/L minimum). Temperature in mixing zone: 98°F.
+
+CWA 316(a) THERMAL VARIANCE: Facility's thermal variance expired
+December 2024. Renewal application NOT filed. Facility operating
+without valid thermal variance authorization.
+
+INTAKE SCREEN: 316(b) cooling water intake structure assessment overdue
+by 14 months. Impingement/entrainment data not submitted.

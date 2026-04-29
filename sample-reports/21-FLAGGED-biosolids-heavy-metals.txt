@@ -1,0 +1,26 @@
+BIOSOLIDS LAND APPLICATION REPORT
+Facility: Metro Regional Wastewater Authority
+NPDES Permit #: OH0089123
+Report Period: Q1 2026
+
+BIOSOLIDS QUALITY - POLLUTANT CONCENTRATIONS (mg/kg dry weight):
+Pollutant    | EPA Ceiling Limit | Result   | Status
+Cadmium      | 85 mg/kg          | 142 mg/kg | EXCEEDS - 167%
+Molybdenum   | 75 mg/kg          | 38 mg/kg  | Compliant
+Arsenic      | 75 mg/kg          | 89 mg/kg  | EXCEEDS - 119%
+Selenium     | 100 mg/kg         | 96 mg/kg  | Borderline
+Lead         | 840 mg/kg         | 920 mg/kg | EXCEEDS - 110%
+Mercury      | 57 mg/kg          | 12 mg/kg  | Compliant
+
+LAND APPLICATION SITE: Farmland adjacent to Green Creek Elementary School.
+Distance from school playground: approximately 200 feet.
+No buffer zone established. No public notification to school district.
+Application occurred during school hours on March 12, 2026.
+
+PATHOGEN REDUCTION: Class B biosolids applied — records show facility
+did NOT meet Class B pathogen reduction requirements for this batch.
+Site access restrictions NOT posted. No vector attraction reduction
+measures documented.
+
+GROUNDWATER MONITORING: Not conducted at application site despite
+proximity to private drinking water wells (3 wells within 500 feet).

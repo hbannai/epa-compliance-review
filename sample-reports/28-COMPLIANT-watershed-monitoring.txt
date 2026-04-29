@@ -1,0 +1,27 @@
+WATERSHED MONITORING PROGRAM REPORT
+Program: Upper Potomac River Watershed Collaborative
+Participants: 8 municipal WWTPs + 3 industrial facilities
+Report Year: 2025
+
+AGGREGATE WATERSHED PERFORMANCE:
+Parameter     | Watershed Cap | Total Load | Status    | Trend
+Total Nitrogen| 185,000 lbs  | 142,000 lbs| COMPLIANT | ↓ 8% from 2024
+Total Phosph. | 24,500 lbs   | 18,900 lbs | COMPLIANT | ↓ 5% from 2024
+Sediment TSS  | 2.1M lbs     | 1.6M lbs   | COMPLIANT | ↓ 12% from 2024
+
+ALL 11 FACILITIES IN INDIVIDUAL COMPLIANCE.
+
+AMBIENT WATER QUALITY MONITORING (22 stations):
+- Dissolved oxygen: All stations > 5.0 mg/L year-round ✓
+- pH: All stations 6.5-8.5 ✓
+- Bacteria: 21 of 22 stations met recreational criteria ✓
+  (Station WQ-14 had 1 exceedance during August storm event)
+- Aquatic life: Benthic macroinvertebrate IBI scores improved
+  at 18 of 22 stations compared to 2024
+
+HABITAT RESTORATION:
+- 12.5 miles of riparian buffer planted (exceeds 10-mile target)
+- 3 fish passage barriers removed
+- 450 acres of agricultural BMPs installed
+
+All data submitted to EPA STORET database. QA/QC protocols followed.

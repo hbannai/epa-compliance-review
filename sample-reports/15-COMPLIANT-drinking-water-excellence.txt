@@ -1,0 +1,27 @@
+ANNUAL DRINKING WATER QUALITY REPORT
+Consumer Confidence Report (CCR)
+Facility: Mountain Springs Water Authority
+PWS ID: CO1870023
+Population Served: 28,500
+Report Year: 2025
+
+REGULATED CONTAMINANT RESULTS:
+Contaminant              | MCL    | MCLG   | Result  | Status
+Total Coliform           | 5%     | 0%     | 0%      | COMPLIANT
+E. coli                  | 0      | 0      | ND      | COMPLIANT
+Nitrate                  | 10mg/L | 10mg/L | 2.1mg/L | COMPLIANT
+Arsenic                  | 0.010  | 0      | 0.002   | COMPLIANT
+Barium                   | 2.0    | 2.0    | 0.15    | COMPLIANT
+Fluoride                 | 4.0    | 4.0    | 0.8     | COMPLIANT
+TTHMs                    | 0.080  | N/A    | 0.032   | COMPLIANT
+HAA5                     | 0.060  | N/A    | 0.018   | COMPLIANT
+Lead (90th percentile)   | 0.015  | 0      | 0.004   | COMPLIANT
+Copper (90th percentile) | 1.3    | 1.3    | 0.28    | COMPLIANT
+Turbidity                | 1 NTU  | N/A    | 0.12    | COMPLIANT
+
+ALL CONTAMINANTS BELOW MCL. ND = Not Detected.
+Source water assessment completed 2024 — low susceptibility rating.
+Treatment: Chlorination, fluoridation, corrosion control.
+All monitoring schedules followed. CCR distributed to all customers by July 1.
+Public notification: No notices required — full compliance.
+Operator certifications current. Emergency response plan updated Jan 2026.

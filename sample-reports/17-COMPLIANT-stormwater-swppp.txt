@@ -1,0 +1,34 @@
+STORMWATER ANNUAL REPORT
+Facility: Blue Ridge Distribution Center
+Permit: Multi-Sector General Permit (MSGP) — Sector P
+Facility Size: 22 acres (8 acres impervious)
+Report Year: 2025
+
+SWPPP STATUS: Current, last updated August 2025.
+SWPPP team training conducted: January 2025, July 2025.
+
+QUARTERLY VISUAL MONITORING:
+Quarter | Date      | Observations          | Issues
+Q1 2025 | Mar 15    | Clear runoff, no sheen| None
+Q2 2025 | Jun 20    | Clear runoff, no sheen| None
+Q3 2025 | Sep 12    | Slight turbidity      | Inlet filter replaced
+Q4 2025 | Dec 8     | Clear runoff, no sheen| None
+
+BENCHMARK MONITORING (Annual):
+Parameter    | Benchmark | Result  | Status
+TSS          | 100 mg/L  | 18 mg/L | COMPLIANT
+Oil & Grease | 15 mg/L   | ND      | COMPLIANT
+pH           | 6.0-9.0   | 7.3     | COMPLIANT
+Total Iron   | 1.0 mg/L  | 0.4 mg/L| COMPLIANT
+
+BMPs IN PLACE:
+✓ Covered loading docks with drip pans
+✓ Paved and swept parking areas (weekly sweeping)
+✓ Oil/water separator at truck wash area
+✓ Vegetated buffer strips (25-ft min) around property
+✓ Detention basin with outlet control structure
+✓ Spill kits at all chemical storage areas
+✓ Employee training program (annual + new hire)
+
+SPILL EVENTS: Zero spills in 2025. SPCC plan current.
+CORRECTIVE ACTIONS: Inlet filter replacement (Q3) — completed same day.

@@ -1,0 +1,25 @@
+SEMI-ANNUAL PRETREATMENT COMPLIANCE REPORT
+Facility: Precision Manufacturing Corp.
+SIU Permit #: IU-2023-1456
+POTW: Regional Wastewater Authority
+Reporting Period: July - December 2025
+Submitted: January 15, 2026 (Due: January 31) — ON TIME
+
+MONITORING RESULTS (Daily Composites):
+Parameter          | Daily Max Limit | Actual Max | Monthly Avg | Status
+Total Chromium     | 1.71 mg/L       | 0.45 mg/L  | 0.22 mg/L   | COMPLIANT
+Total Zinc         | 1.48 mg/L       | 0.89 mg/L  | 0.51 mg/L   | COMPLIANT
+Total Copper       | 2.07 mg/L       | 1.12 mg/L  | 0.68 mg/L   | COMPLIANT
+Total Nickel       | 2.38 mg/L       | 0.95 mg/L  | 0.43 mg/L   | COMPLIANT
+Total Cyanide      | 0.65 mg/L       | 0.08 mg/L  | 0.03 mg/L   | COMPLIANT
+Oil & Grease       | 100 mg/L        | 22 mg/L    | 11 mg/L     | COMPLIANT
+pH                 | 6.0-9.0         | Range: 6.8-8.2            | COMPLIANT
+
+PRETREATMENT SYSTEM:
+- Chemical precipitation system — operational, maintained monthly
+- pH adjustment system — operational, calibrated weekly
+- Oil/water separator — cleaned quarterly, last service Dec 2025
+
+SELF-MONITORING: All 183 days of required monitoring completed.
+RECORDS: All chain of custody, calibration, and maintenance records current.
+SLUG DISCHARGE PLAN: Updated October 2025.

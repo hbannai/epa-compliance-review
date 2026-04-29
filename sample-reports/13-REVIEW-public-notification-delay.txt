@@ -1,0 +1,24 @@
+PUBLIC NOTIFICATION COMPLIANCE REPORT
+Facility: Sunset Valley Water District
+PWS ID: AZ0440089
+Incident Date: February 28, 2026
+
+INCIDENT: Routine monitoring detected Total Trihalomethanes (TTHMs)
+at 0.085 mg/L, exceeding the MCL of 0.080 mg/L.
+
+NOTIFICATION TIMELINE:
+- Sample collected: Feb 15, 2026
+- Lab results received: Feb 22, 2026
+- State notified: Feb 25, 2026 (3 days after results — required: 24 hrs)
+- Public notified: March 8, 2026 (14 days after results)
+- Required public notice deadline: Feb 22, 2026 (within 24 hours)
+
+PUBLIC NOTIFICATION WAS 14 DAYS LATE.
+
+CORRECTIVE ACTIONS TAKEN:
+- Adjusted chlorination dosing immediately upon receiving results
+- Re-tested on March 1 — result: 0.072 mg/L (back in compliance)
+- Distribution system flushing completed March 3
+- Filed consumer confidence report addendum
+
+All other parameters compliant. Treatment system properly maintained.
