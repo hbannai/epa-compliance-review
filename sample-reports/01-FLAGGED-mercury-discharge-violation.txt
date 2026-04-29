@@ -1,0 +1,20 @@
+DISCHARGE MONITORING REPORT (DMR)
+Facility: Riverside Chemical Processing Plant
+NPDES Permit #: VA0045231
+Reporting Period: January 2026 - March 2026
+Submitted: April 15, 2026
+
+EFFLUENT MONITORING DATA:
+Parameter               | Permit Limit | Actual Value | Exceedance
+Mercury (Hg)            | 0.012 mg/L   | 0.089 mg/L   | YES - 641% OVER LIMIT
+Lead (Pb)               | 0.015 mg/L   | 0.052 mg/L   | YES - 247% OVER LIMIT
+Total Suspended Solids  | 30 mg/L      | 28 mg/L      | No
+BOD5                    | 25 mg/L      | 22 mg/L      | No
+pH                      | 6.0-9.0      | 5.2          | YES - BELOW RANGE
+
+NOTES: Equipment malfunction on Line 3 discharge on Feb 12 resulted in
+untreated wastewater entering the James River for approximately 4.5 hours.
+Estimated volume of unauthorized discharge: 45,000 gallons.
+No public notification was issued. Corrective action plan NOT submitted.
+
+Self-monitoring data for February 14-28 is MISSING from facility records.
