@@ -1,0 +1,1210 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  EPA Office of Water - Citizen Compliance Report Submission & AI Review System.
+  Uses Amazon Bedrock (Mistral) for automated compliance checking against EPA regulations.
+  All Lambda code is inline - no external S3 bucket needed. Just deploy this template.
+  Enhanced with: Email Notifications, AI Chatbot, Analytics Dashboard, PDF Export, Search/Filter/Assignment.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: epa-compliance-review
+    Description: Project name prefix for all resources
+
+  BedrockModelId:
+    Type: String
+    Default: mistral.mistral-large-2402-v1:0
+    Description: Bedrock model ID for Mistral
+
+  NotificationEmail:
+    Type: String
+    Default: ''
+    Description: Email for flagged-report notifications (leave blank to skip)
+
+Conditions:
+  HasNotificationEmail: !Not [!Equals [!Ref NotificationEmail, '']]
+
+Resources:
+
+  # ===================== S3 AUTO-ANALYZE (bulk upload trigger) =====================
+
+  AutoAnalyzeFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-auto-analyze'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          DOCUMENTS_BUCKET: !Sub '${ProjectName}-docs-${AWS::AccountId}'
+          REPORTS_TABLE: !Sub '${ProjectName}-reports'
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          EPA_PROMPT: >
+            You are an EPA Office of Water compliance analyst AI.
+            Analyze the submitted document against EPA compliance monitoring regulations.
+            CHECK EACH OF THESE 18 COMPLIANCE AREAS. Rate each as COMPLIANT|NON_COMPLIANT|NEEDS_REVIEW|INSUFFICIENT_DATA:
+            CLEAN WATER ACT: 1.NPDES_PERMIT 2.WATER_QUALITY_STANDARDS 3.DISCHARGE_REPORTING 4.PRETREATMENT_STANDARDS
+            SAFE DRINKING WATER ACT: 5.MAX_CONTAMINANT_LEVELS 6.MONITORING_REPORTING 7.TREATMENT_TECHNIQUES
+            EFFLUENT & DISCHARGE: 8.EFFLUENT_LIMITATIONS 9.TMDL_COMPLIANCE 10.STORMWATER_MGMT
+            FACILITY & OPS: 11.RECORD_KEEPING 12.SELF_MONITORING 13.SPILL_PREVENTION 14.BEST_MGMT_PRACTICES
+            REPORTING: 15.TIMELY_REPORTING 16.DATA_ACCURACY 17.PUBLIC_NOTIFICATION 18.CORRECTIVE_ACTIONS
+            For each: status, evidence, risk_level(LOW|MEDIUM|HIGH|CRITICAL), recommendation.
+            Also: overall_risk_score(1-100), priority_flag(ROUTINE|ELEVATED|URGENT|CRITICAL), summary, key_violations[], recommended_actions[].
+            RESPOND IN VALID JSON ONLY. DOCUMENT: {document_text}
+      Code:
+        ZipFile: |
+          import json,boto3,os,uuid
+          from datetime import datetime
+          s3c=boto3.client('s3')
+          ddb=boto3.resource('dynamodb')
+          br=boto3.client('bedrock-runtime')
+          tx=boto3.client('textract')
+          tbl=ddb.Table(os.environ['REPORTS_TABLE'])
+          BKT=os.environ['DOCUMENTS_BUCKET']
+          MDL=os.environ['BEDROCK_MODEL_ID']
+          PROMPT=os.environ.get('EPA_PROMPT','')
+          def handler(event,ctx):
+              for rec in event.get('Records',[]):
+                  key=rec['s3']['object']['key']
+                  fn=key.split('/')[-1]
+                  rid=str(uuid.uuid4())
+                  tbl.put_item(Item={'reportId':rid,'fileName':fn,'s3Key':key,'status':'ANALYZING','submittedAt':datetime.utcnow().isoformat(),'submitterName':'S3 Upload','submitterEmail':'','facilityName':fn.replace('.txt','').replace('.pdf','').replace('-',' ').replace('_',' '),'reportType':'general','description':'Auto-submitted via S3','aiReview':{},'humanReview':{}})
+                  try:
+                      if key.lower().endswith(('.txt','.csv')):
+                          text=s3c.get_object(Bucket=BKT,Key=key)['Body'].read().decode('utf-8')
+                      else:
+                          r=tx.detect_document_text(Document={'S3Object':{'Bucket':BKT,'Name':key}})
+                          text='\n'.join(b.get('Text','') for b in r.get('Blocks',[]) if b['BlockType']=='LINE')
+                  except Exception as e:
+                      text=f'[Error: {e}]'
+                  prompt=PROMPT.replace('{document_text}',text[:50000])
+                  r=br.invoke_model(modelId=MDL,contentType='application/json',accept='application/json',body=json.dumps({"messages":[{"role":"user","content":prompt}],"max_tokens":4096,"temperature":0.1}))
+                  c=json.loads(r['body'].read()).get('choices',[{}])[0].get('message',{}).get('content','')
+                  try:
+                      if '```json' in c:c=c.split('```json')[1].split('```')[0]
+                      elif '```' in c:c=c.split('```')[1].split('```')[0]
+                      ai=json.loads(c.strip())
+                  except:
+                      ai={"raw_analysis":c,"parse_error":True}
+                  rs=ai.get('overall_risk_score',50);pr=ai.get('priority_flag','ROUTINE')
+                  st='FLAGGED_FOR_REVIEW' if rs>70 or pr in('URGENT','CRITICAL') else 'NEEDS_REVIEW' if rs>40 or pr=='ELEVATED' else 'AI_APPROVED'
+                  tbl.update_item(Key={'reportId':rid},UpdateExpression='SET #s=:s,aiReview=:ai,analyzedAt=:t,riskScore=:r',ExpressionAttributeNames={'#s':'status'},ExpressionAttributeValues={':s':st,':ai':ai,':t':datetime.utcnow().isoformat(),':r':rs})
+
+  S3InvokeAutoAnalyzePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AutoAnalyzeFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub 'arn:aws:s3:::${ProjectName}-docs-${AWS::AccountId}'
+
+  # ===================== S3 BUCKETS =====================
+
+  DocumentsBucket:
+    Type: AWS::S3::Bucket
+    DependsOn: S3InvokeAutoAnalyzePermission
+    Properties:
+      BucketName: !Sub '${ProjectName}-docs-${AWS::AccountId}'
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/
+            Function: !GetAtt AutoAnalyzeFunction.Arn
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ArchiveOldReports
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 365
+
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-web-${AWS::AccountId}'
+
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${ProjectName}-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt WebsiteBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponsePagePath: /error.html
+            ResponseCode: 404
+            ErrorCachingMinTTL: 10
+
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontAccess
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${WebsiteBucket}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+  # ===================== DYNAMODB =====================
+
+  ReportsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}-reports'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: reportId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: submittedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: reportId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-submittedAt-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: submittedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # ===================== IAM =====================
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:GetObject', 's3:PutObject', 's3:ListBucket']
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ProjectName}-docs-${AWS::AccountId}'
+                  - !Sub 'arn:aws:s3:::${ProjectName}-docs-${AWS::AccountId}/*'
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:Query', 'dynamodb:Scan']
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-reports'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-reports/index/*'
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream']
+                Resource: '*'
+        - PolicyName: LambdaSelfInvoke
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 'lambda:InvokeFunction'
+                Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ProjectName}-*'
+        - PolicyName: TextractAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['textract:DetectDocumentText', 'textract:AnalyzeDocument']
+                Resource: '*'
+        - PolicyName: SESAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['ses:SendEmail', 'ses:SendRawEmail']
+                Resource: '*'
+
+  # ===================== LAMBDA FUNCTIONS (Inline Code) =====================
+
+  UploadFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-upload'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          DOCUMENTS_BUCKET: !Ref DocumentsBucket
+          REPORTS_TABLE: !Ref ReportsTable
+      Code:
+        ZipFile: |
+          import json,boto3,uuid,os
+          from datetime import datetime
+          s3=boto3.client('s3')
+          ddb=boto3.resource('dynamodb')
+          tbl=ddb.Table(os.environ['REPORTS_TABLE'])
+          BKT=os.environ['DOCUMENTS_BUCKET']
+          H={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'POST,OPTIONS'}
+          def handler(event,context):
+              if event.get('httpMethod')=='OPTIONS':
+                  return{'statusCode':200,'headers':H,'body':''}
+              try:
+                  body=json.loads(event['body'])
+                  rid=str(uuid.uuid4())
+                  fn=body.get('fileName','document.pdf')
+                  ft=body.get('fileType','application/pdf')
+                  key=f"uploads/{rid}/{fn}"
+                  url=s3.generate_presigned_url('put_object',Params={'Bucket':BKT,'Key':key,'ContentType':ft},ExpiresIn=3600)
+                  tbl.put_item(Item={'reportId':rid,'fileName':fn,'s3Key':key,'status':'UPLOADED','submittedAt':datetime.utcnow().isoformat(),'submitterName':body.get('submitterName','Anonymous'),'submitterEmail':body.get('submitterEmail',''),'facilityName':body.get('facilityName',''),'reportType':body.get('reportType','general'),'description':body.get('description',''),'aiReview':{},'humanReview':{}})
+                  return{'statusCode':200,'headers':H,'body':json.dumps({'reportId':rid,'uploadUrl':url,'message':'Upload URL generated.'})}
+              except Exception as e:
+                  return{'statusCode':500,'headers':H,'body':json.dumps({'error':str(e)})}
+
+  AnalyzeFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-analyze'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          DOCUMENTS_BUCKET: !Ref DocumentsBucket
+          REPORTS_TABLE: !Ref ReportsTable
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          EPA_PROMPT: >
+            You are an EPA Office of Water compliance analyst AI.
+            Analyze the submitted document against EPA compliance monitoring regulations.
+            CHECK EACH OF THESE 18 COMPLIANCE AREAS. Rate each as COMPLIANT|NON_COMPLIANT|NEEDS_REVIEW|INSUFFICIENT_DATA:
+            CLEAN WATER ACT: 1.NPDES_PERMIT 2.WATER_QUALITY_STANDARDS 3.DISCHARGE_REPORTING 4.PRETREATMENT_STANDARDS
+            SAFE DRINKING WATER ACT: 5.MAX_CONTAMINANT_LEVELS 6.MONITORING_REPORTING 7.TREATMENT_TECHNIQUES
+            EFFLUENT & DISCHARGE: 8.EFFLUENT_LIMITATIONS 9.TMDL_COMPLIANCE 10.STORMWATER_MGMT
+            FACILITY & OPS: 11.RECORD_KEEPING 12.SELF_MONITORING 13.SPILL_PREVENTION 14.BEST_MGMT_PRACTICES
+            REPORTING: 15.TIMELY_REPORTING 16.DATA_ACCURACY 17.PUBLIC_NOTIFICATION 18.CORRECTIVE_ACTIONS
+            For each: status, evidence, risk_level(LOW|MEDIUM|HIGH|CRITICAL), recommendation.
+            Also: overall_risk_score(1-100), priority_flag(ROUTINE|ELEVATED|URGENT|CRITICAL), summary, key_violations[], recommended_actions[].
+            RESPOND IN VALID JSON ONLY. DOCUMENT: {document_text}
+      Code:
+        ZipFile: |
+          import json,boto3,os
+          from datetime import datetime
+          s3=boto3.client('s3')
+          ddb=boto3.resource('dynamodb')
+          br=boto3.client('bedrock-runtime')
+          tx=boto3.client('textract')
+          lm=boto3.client('lambda')
+          tbl=ddb.Table(os.environ['REPORTS_TABLE'])
+          BKT=os.environ['DOCUMENTS_BUCKET']
+          MDL=os.environ['BEDROCK_MODEL_ID']
+          PROMPT=os.environ.get('EPA_PROMPT','Analyze for EPA compliance. Return JSON.')
+          H={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'POST,OPTIONS'}
+          def extract(bucket,key):
+              try:
+                  if key.lower().endswith(('.txt','.csv')):
+                      return s3.get_object(Bucket=bucket,Key=key)['Body'].read().decode('utf-8')
+                  r=tx.detect_document_text(Document={'S3Object':{'Bucket':bucket,'Name':key}})
+                  return '\n'.join(b.get('Text','') for b in r.get('Blocks',[]) if b['BlockType']=='LINE')
+              except Exception as e:
+                  return f'[Extraction error: {e}]'
+          def run_ai(text):
+              prompt=PROMPT.replace('{document_text}',text[:50000])
+              r=br.invoke_model(modelId=MDL,contentType='application/json',accept='application/json',body=json.dumps({"messages":[{"role":"user","content":prompt}],"max_tokens":4096,"temperature":0.1}))
+              c=json.loads(r['body'].read()).get('choices',[{}])[0].get('message',{}).get('content','')
+              try:
+                  if '```json' in c:c=c.split('```json')[1].split('```')[0]
+                  elif '```' in c:c=c.split('```')[1].split('```')[0]
+                  return json.loads(c.strip())
+              except:
+                  return{"raw_analysis":c,"parse_error":True}
+          def handler(event,context):
+              if event.get('httpMethod')=='OPTIONS':
+                  return{'statusCode':200,'headers':H,'body':''}
+              if event.get('async'):
+                  rid=event['reportId']
+                  rpt=tbl.get_item(Key={'reportId':rid})['Item']
+                  text=extract(BKT,rpt['s3Key'])
+                  ai=run_ai(text)
+                  rs=ai.get('overall_risk_score',50);pr=ai.get('priority_flag','ROUTINE')
+                  st='FLAGGED_FOR_REVIEW' if rs>70 or pr in('URGENT','CRITICAL') else 'NEEDS_REVIEW' if rs>40 or pr=='ELEVATED' else 'AI_APPROVED'
+                  tbl.update_item(Key={'reportId':rid},UpdateExpression='SET #s=:s,aiReview=:ai,analyzedAt=:t,riskScore=:r',ExpressionAttributeNames={'#s':'status'},ExpressionAttributeValues={':s':st,':ai':ai,':t':datetime.utcnow().isoformat(),':r':rs})
+                  return
+              try:
+                  body=json.loads(event['body']);rid=body['reportId']
+                  tbl.update_item(Key={'reportId':rid},UpdateExpression='SET #s=:s',ExpressionAttributeNames={'#s':'status'},ExpressionAttributeValues={':s':'ANALYZING'})
+                  lm.invoke(FunctionName=context.function_name,InvocationType='Event',Payload=json.dumps({'async':True,'reportId':rid}))
+                  return{'statusCode':200,'headers':H,'body':json.dumps({'reportId':rid,'status':'ANALYZING','message':'Analysis started. Check review dashboard for results.'})}
+              except Exception as e:
+                  return{'statusCode':500,'headers':H,'body':json.dumps({'error':str(e)})}
+
+  ReviewFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-review'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          REPORTS_TABLE: !Ref ReportsTable
+          NOTIFY_FUNCTION: !Sub '${ProjectName}-notify'
+      Code:
+        ZipFile: |
+          import json,boto3,os
+          from datetime import datetime
+          from boto3.dynamodb.conditions import Key,Attr
+          ddb=boto3.resource('dynamodb')
+          lm=boto3.client('lambda')
+          tbl=ddb.Table(os.environ['REPORTS_TABLE'])
+          NF=os.environ.get('NOTIFY_FUNCTION','')
+          H={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,PUT,OPTIONS'}
+          def handler(event,context):
+              if event.get('httpMethod')=='OPTIONS':
+                  return{'statusCode':200,'headers':H,'body':''}
+              method=event.get('httpMethod','GET')
+              params=event.get('queryStringParameters') or {}
+              try:
+                  if method=='GET' and 'reportId' not in params:
+                      sf=params.get('status','FLAGGED_FOR_REVIEW')
+                      if sf=='ALL':
+                          r=tbl.scan()
+                      else:
+                          r=tbl.query(IndexName='status-submittedAt-index',KeyConditionExpression=Key('status').eq(sf))
+                      items=r.get('Items',[])
+                      search=params.get('search','').lower()
+                      if search:
+                          items=[i for i in items if search in (i.get('facilityName','')+''+i.get('fileName','')).lower()]
+                      fd=params.get('fromDate','');td=params.get('toDate','')
+                      if fd:
+                          items=[i for i in items if i.get('submittedAt','')>=fd]
+                      if td:
+                          items=[i for i in items if i.get('submittedAt','')<=td+'T23:59:59']
+                      return{'statusCode':200,'headers':H,'body':json.dumps({'reports':items},default=str)}
+                  elif method=='GET' and 'reportId' in params:
+                      item=tbl.get_item(Key={'reportId':params['reportId']}).get('Item',{})
+                      return{'statusCode':200,'headers':H,'body':json.dumps({'report':item},default=str)}
+                  elif method=='PUT':
+                      body=json.loads(event['body'])
+                      rid=body['reportId']
+                      if 'assign' in body:
+                          tbl.update_item(Key={'reportId':rid},UpdateExpression='SET assignedTo=:a',ExpressionAttributeValues={':a':body['assign']})
+                          return{'statusCode':200,'headers':H,'body':json.dumps({'reportId':rid,'message':'Assigned to '+body['assign']})}
+                      dec=body['decision'];notes=body.get('notes','');rn=body.get('reviewerName','Unknown')
+                      tbl.update_item(Key={'reportId':rid},UpdateExpression='SET #s=:s,humanReview=:hr,reviewedAt=:t',ExpressionAttributeNames={'#s':'status'},ExpressionAttributeValues={':s':f'HUMAN_{dec}',':hr':{'decision':dec,'notes':notes,'reviewerName':rn,'reviewedAt':datetime.utcnow().isoformat()},':t':datetime.utcnow().isoformat()})
+                      try:lm.invoke(FunctionName=NF,InvocationType='Event',Payload=json.dumps({'reportId':rid,'decision':dec,'notes':notes,'reviewer':rn}))
+                      except:pass
+                      return{'statusCode':200,'headers':H,'body':json.dumps({'reportId':rid,'status':f'HUMAN_{dec}','message':f'Report {dec.lower()} by {rn}'})}
+                  return{'statusCode':400,'headers':H,'body':json.dumps({'error':'Invalid request'})}
+              except Exception as e:
+                  return{'statusCode':500,'headers':H,'body':json.dumps({'error':str(e)})}
+
+  # ===================== NEW: EMAIL NOTIFICATION FUNCTION =====================
+
+  NotifyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-notify'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          REPORTS_TABLE: !Ref ReportsTable
+      Code:
+        ZipFile: |
+          import json,boto3,os
+          ses=boto3.client('ses')
+          ddb=boto3.resource('dynamodb')
+          tbl=ddb.Table(os.environ['REPORTS_TABLE'])
+          def handler(event,ctx):
+              rid=event.get('reportId','')
+              dec=event.get('decision','')
+              notes=event.get('notes','')
+              reviewer=event.get('reviewer','')
+              try:
+                  rpt=tbl.get_item(Key={'reportId':rid}).get('Item',{})
+                  email=rpt.get('submitterEmail','')
+                  if not email:return
+                  fac=rpt.get('facilityName','Unknown')
+                  rs=rpt.get('riskScore',0)
+                  subj=f'EPA Compliance Review: {fac} - {dec}'
+                  body=f'Dear {rpt.get("submitterName","Submitter")},\n\nYour compliance report for {fac} has been reviewed.\n\nDecision: {dec}\nRisk Score: {rs}/100\nReviewer: {reviewer}\nNotes: {notes or "None"}\n\nReport ID: {rid}\n\n- EPA Office of Water Compliance System'
+                  ses.send_email(Source=email,Destination={'ToAddresses':[email]},Message={'Subject':{'Data':subj},'Body':{'Text':{'Data':body}}})
+              except Exception as e:
+                  print(f'Notify error: {e}')
+
+  # ===================== NEW: AI CHATBOT FUNCTION =====================
+
+  ChatFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-chat'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          REPORTS_TABLE: !Ref ReportsTable
+          BEDROCK_MODEL_ID: mistral.mistral-small-2402-v1:0
+      Code:
+        ZipFile: |
+          import json,boto3,os
+          from decimal import Decimal
+          ddb=boto3.resource('dynamodb')
+          br=boto3.client('bedrock-runtime')
+          tbl=ddb.Table(os.environ['REPORTS_TABLE'])
+          MDL=os.environ['BEDROCK_MODEL_ID']
+          H={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'POST,OPTIONS'}
+          SYS="You are an EPA compliance assistant with access to the reports database. Answer based on the data provided. Be concise."
+          class DE(json.JSONEncoder):
+              def default(self,o):
+                  if isinstance(o,Decimal):return int(o) if o%1==0 else float(o)
+                  return super().default(o)
+          def get_context():
+              r=tbl.scan(ProjectionExpression='reportId,facilityName,#s,riskScore,submittedAt',ExpressionAttributeNames={'#s':'status'})
+              items=r.get('Items',[])
+              flagged=sorted([i for i in items if i.get('status')=='FLAGGED_FOR_REVIEW'],key=lambda x:int(x.get('riskScore',0)),reverse=True)[:5]
+              summary=f"Total reports:{len(items)}. "
+              summary+=f"Flagged:{len([i for i in items if i.get('status')=='FLAGGED_FOR_REVIEW'])}. "
+              summary+=f"Top flagged: "+"; ".join(f"{i.get('facilityName','')}(risk:{i.get('riskScore','')})" for i in flagged)
+              return summary
+          def handler(event,ctx):
+              if event.get('httpMethod')=='OPTIONS':
+                  return{'statusCode':200,'headers':H,'body':''}
+              try:
+                  body=json.loads(event['body'])
+                  q=body.get('question','')
+                  rid=body.get('reportId','')
+                  if rid:
+                      rpt=tbl.get_item(Key={'reportId':rid}).get('Item',{})
+                      ctx_text=f"Report: {rpt.get('facilityName','')} Status={rpt.get('status','')} Risk={rpt.get('riskScore','')}"
+                  else:
+                      ctx_text=get_context()
+                  prompt=f"{SYS}\nData: {ctx_text}\nQuestion: {q}"
+                  r=br.invoke_model(modelId=MDL,contentType='application/json',accept='application/json',body=json.dumps({"messages":[{"role":"user","content":prompt}],"max_tokens":512,"temperature":0.2}))
+                  ans=json.loads(r['body'].read()).get('choices',[{}])[0].get('message',{}).get('content','No response')
+                  return{'statusCode':200,'headers':H,'body':json.dumps({'answer':ans})}
+              except Exception as e:
+                  return{'statusCode':500,'headers':H,'body':json.dumps({'error':str(e)})}  # ===================== NEW: STATS/ANALYTICS FUNCTION =====================
+
+  StatsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-stats'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          REPORTS_TABLE: !Ref ReportsTable
+      Code:
+        ZipFile: |
+          import json,boto3,os
+          from collections import Counter,defaultdict
+          from datetime import datetime,timedelta
+          ddb=boto3.resource('dynamodb')
+          tbl=ddb.Table(os.environ['REPORTS_TABLE'])
+          H={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type,Authorization','Access-Control-Allow-Methods':'GET,OPTIONS'}
+          def handler(event,ctx):
+              if event.get('httpMethod')=='OPTIONS':
+                  return{'statusCode':200,'headers':H,'body':''}
+              try:
+                  qp=event.get('queryStringParameters') or {}
+                  days=qp.get('days')
+                  r=tbl.scan()
+                  items=r.get('Items',[])
+                  if days:
+                      cutoff=(datetime.utcnow()-timedelta(days=int(days))).isoformat()
+                      items=[i for i in items if i.get('submittedAt','')>=cutoff]
+                  total=len(items)
+                  by_status=Counter(i.get('status','UNKNOWN') for i in items)
+                  flagged=by_status.get('FLAGGED_FOR_REVIEW',0)
+                  needs=by_status.get('NEEDS_REVIEW',0)
+                  approved=by_status.get('AI_APPROVED',0)+by_status.get('HUMAN_APPROVED',0)
+                  scores=[int(i.get('riskScore',0)) for i in items if i.get('riskScore')]
+                  avg_risk=sum(scores)//max(len(scores),1)
+                  bins=[('0-20',0),('21-40',0),('41-60',0),('61-80',0),('81-100',0)]
+                  for s in scores:
+                      idx=min(s//20,4) if s>0 else 0
+                      bins[idx]=(bins[idx][0],bins[idx][1]+1)
+                  risk_dist=[{'range':b[0],'count':b[1]} for b in bins]
+                  viols=Counter()
+                  for i in items:
+                      ai=i.get('aiReview',{})
+                      if isinstance(ai,dict):
+                          for v in ai.get('key_violations',[]):viols[v]+=1
+                  top_v=[{'name':k,'count':v} for k,v in viols.most_common(8)]
+                  trend=defaultdict(int)
+                  for i in items:
+                      d=i.get('submittedAt','')[:10]
+                      if d:trend[d]+=1
+                  trend_data=sorted([{'date':k,'count':v} for k,v in trend.items()],key=lambda x:x['date'])[-14:]
+                  return{'statusCode':200,'headers':H,'body':json.dumps({'total':total,'flagged':flagged,'needsReview':needs,'approved':approved,'avgRisk':avg_risk,'byStatus':dict(by_status),'riskDistribution':risk_dist,'topViolations':top_v,'trend':trend_data})}
+              except Exception as e:
+                  return{'statusCode':500,'headers':H,'body':json.dumps({'error':str(e)})}  # ===================== NEW: EXPORT/PDF FUNCTION =====================
+
+  ExportFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-export'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          REPORTS_TABLE: !Ref ReportsTable
+      Code:
+        ZipFile: |
+          import json,boto3,os
+          ddb=boto3.resource('dynamodb')
+          tbl=ddb.Table(os.environ['REPORTS_TABLE'])
+          H={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type','Access-Control-Allow-Methods':'GET,OPTIONS','Content-Type':'text/html'}
+          def handler(event,ctx):
+              if event.get('httpMethod')=='OPTIONS':
+                  return{'statusCode':200,'headers':H,'body':''}
+              params=event.get('queryStringParameters') or {}
+              rid=params.get('reportId','')
+              if not rid:return{'statusCode':400,'headers':H,'body':'Missing reportId'}
+              try:
+                  rpt=tbl.get_item(Key={'reportId':rid}).get('Item',{})
+                  ai=rpt.get('aiReview',{})
+                  hr=rpt.get('humanReview',{})
+                  rs=rpt.get('riskScore',0)
+                  color='#dc2626' if int(rs)>70 else '#d97706' if int(rs)>40 else '#059669'
+                  viols=''.join(f'<li>{v}</li>' for v in (ai.get('key_violations',[]) or []))or'<li>None</li>'
+                  acts=''.join(f'<li>{a}</li>' for a in (ai.get('recommended_actions',[]) or []))or'<li>None</li>'
+                  html=f'<!DOCTYPE html><html><head><title>EPA Report - {rpt.get("facilityName","")}</title><style>body{{font-family:Arial;padding:2rem;max-width:900px;margin:auto}}h1{{color:#1a365d}}table{{width:100%;border-collapse:collapse}}th,td{{border:1px solid #ddd;padding:8px;text-align:left}}th{{background:#f0f4f8}}.risk{{font-size:2rem;color:{color};font-weight:bold}}</style></head><body><h1>EPA Compliance Review Report</h1><p><strong>Facility:</strong> {rpt.get("facilityName","")}</p><p><strong>Report ID:</strong> {rid}</p><p><strong>Submitted:</strong> {rpt.get("submittedAt","")}</p><p><strong>Status:</strong> {rpt.get("status","")}</p><p><strong>Risk Score:</strong> <span class="risk">{rs}/100</span></p><p><strong>Priority:</strong> {ai.get("priority_flag","N/A")}</p><h2>AI Analysis Summary</h2><p>{ai.get("summary","Pending")}</p><h2>Key Violations</h2><ul>{viols}</ul><h2>Recommended Actions</h2><ul>{acts}</ul>'
+                  if hr:html+=f'<h2>Human Review</h2><p><strong>Decision:</strong> {hr.get("decision","")}</p><p><strong>Reviewer:</strong> {hr.get("reviewerName","")}</p><p><strong>Notes:</strong> {hr.get("notes","None")}</p>'
+                  html+='<hr><p style="color:#666;font-size:0.8rem">Generated by EPA Office of Water AI Compliance System</p><script>window.print()</script></body></html>'
+                  return{'statusCode':200,'headers':H,'body':html}
+              except Exception as e:
+                  return{'statusCode':500,'headers':H,'body':f'Error: {e}'}
+
+  # ===================== AUTO-DEPLOY FRONTEND =====================
+
+  FrontendDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-deploy-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Write
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['s3:PutObject', 's3:DeleteObject']
+                Resource: !Sub '${WebsiteBucket.Arn}/*'
+        - PolicyName: ApiGatewayDeploy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['apigateway:POST', 'apigateway:GET']
+                Resource: !Sub 'arn:aws:apigateway:${AWS::Region}::/restapis/${ApiGateway}/*'
+
+  FrontendDeployFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-deploy-frontend'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt FrontendDeployRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          import json,boto3,base64,gzip,urllib.request
+          s3=boto3.client('s3')
+          def handler(event,ctx):
+              try:
+                  p=event['ResourceProperties']
+                  bkt=p['Bucket'];api=p.get('ApiUrl','')
+                  if event['RequestType'] in ('Create','Update'):
+                      for f in p.get('Files',[]):
+                          data=gzip.decompress(base64.b64decode(f['Data'])).decode('utf-8')
+                          if api:data=data.replace('%%API_URL%%',api)
+                          s3.put_object(Bucket=bkt,Key=f['Key'],Body=data.encode('utf-8'),ContentType=f['CT'])
+                  send(event,ctx,'SUCCESS',{})
+              except Exception as e:
+                  print(e)
+                  send(event,ctx,'FAILED',{'Error':str(e)})
+          def send(event,ctx,status,data):
+              body=json.dumps({'Status':status,'Reason':'See CloudWatch','UniqueId':'id','StackId':event['StackId'],'RequestId':event['RequestId'],'LogicalResourceId':event['LogicalResourceId'],'PhysicalResourceId':ctx.log_stream_name,'Data':data}).encode()
+              req=urllib.request.Request(event['ResponseURL'],data=body,headers={'Content-Type':'','Content-Length':len(body)},method='PUT')
+              urllib.request.urlopen(req)
+
+
+
+  # ===================== API GATEWAY AUTO-REDEPLOY =====================
+
+  ApiRedeployFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-api-redeploy'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt FrontendDeployRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json,boto3,urllib.request
+          apigw=boto3.client('apigateway')
+          def handler(event,ctx):
+              try:
+                  p=event['ResourceProperties']
+                  if event['RequestType'] in ('Create','Update'):
+                      apigw.create_deployment(restApiId=p['RestApiId'],stageName=p['StageName'],description='CFN auto '+p.get('Trigger',''))
+                  send(event,ctx,'SUCCESS',{})
+              except Exception as e:
+                  print(e)
+                  send(event,ctx,'SUCCESS',{})
+          def send(event,ctx,status,data):
+              body=json.dumps({'Status':status,'Reason':'See CW','UniqueId':'id','StackId':event['StackId'],'RequestId':event['RequestId'],'LogicalResourceId':event['LogicalResourceId'],'PhysicalResourceId':ctx.log_stream_name,'Data':data}).encode()
+              req=urllib.request.Request(event['ResponseURL'],data=body,headers={'Content-Type':'','Content-Length':len(body)},method='PUT')
+              urllib.request.urlopen(req)
+
+  ApiRedeployTrigger:
+    Type: Custom::ApiRedeploy
+    DependsOn:
+      - ApiStage
+      - UploadPost
+      - AnalyzePost
+      - ReviewGet
+      - ReviewPut
+      - ChatPost
+      - StatsGet
+      - ExportGet
+      - GatewayResponse4XX
+      - GatewayResponse5XX
+    Properties:
+      ServiceToken: !GetAtt ApiRedeployFunction.Arn
+      RestApiId: !Ref ApiGateway
+      StageName: prod
+      Trigger: 'v2026-05-07-1630'
+
+  # ===================== API GATEWAY =====================
+
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub '${ProjectName}-api'
+      Description: EPA Compliance Report Submission & Review API
+
+  UploadResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: upload
+
+  UploadPost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref UploadResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadFunction.Arn}/invocations'
+
+  UploadOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref UploadResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  AnalyzeResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: analyze
+
+  AnalyzePost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref AnalyzeResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AnalyzeFunction.Arn}/invocations'
+
+  AnalyzeOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref AnalyzeResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  ReviewResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: review
+
+  ReviewGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ReviewResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReviewFunction.Arn}/invocations'
+
+  ReviewPut:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ReviewResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReviewFunction.Arn}/invocations'
+
+  ReviewOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ReviewResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # ---- NEW: Chat Resource ----
+  ChatResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: chat
+
+  ChatPost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ChatResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ChatFunction.Arn}/invocations'
+
+  ChatOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ChatResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # ---- NEW: Stats Resource ----
+  StatsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: stats
+
+  StatsGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref StatsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StatsFunction.Arn}/invocations'
+
+  StatsOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref StatsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # ---- NEW: Export Resource ----
+  ExportResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: export
+
+  ExportGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ExportResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ExportFunction.Arn}/invocations'
+
+  ExportOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref ExportResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Lambda Invoke Permissions
+  UploadLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UploadFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*'
+
+  AnalyzeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AnalyzeFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*'
+
+  ReviewLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ReviewFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*'
+
+  ChatLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ChatFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*'
+
+  StatsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref StatsFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*'
+
+  ExportLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ExportFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*'
+
+
+  # ===================== CORS GATEWAY RESPONSES =====================
+  # Ensures API Gateway's own error responses (4xx/5xx) include CORS headers
+
+  GatewayResponse4XX:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: DEFAULT_4XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+
+  GatewayResponse5XX:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: DEFAULT_5XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+
+  # API Deployment
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - UploadPost
+      - AnalyzePost
+      - ReviewGet
+      - ReviewPut
+      - UploadOptions
+      - AnalyzeOptions
+      - ReviewOptions
+      - ChatPost
+      - ChatOptions
+      - StatsGet
+      - StatsOptions
+      - ExportGet
+      - ExportOptions
+    Properties:
+      RestApiId: !Ref ApiGateway
+      Description: 'Deployment v202605071522 - CORS MOCK OPTIONS + chat stats export notify'
+
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref ApiGateway
+      DeploymentId: !Ref ApiDeployment
+      StageName: prod
+
+  FrontendDeployment:
+    Type: Custom::FrontendDeploy
+    DependsOn: [WebsiteBucket, WebsiteBucketPolicy, ApiStage]
+    Properties:
+      ServiceToken: !GetAtt FrontendDeployFunction.Arn
+      Bucket: !Ref WebsiteBucket
+      ApiUrl: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+      Files:
+        - Key: index.html
+          CT: text/html
+          Data: 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
+        - Key: error.html
+          CT: text/html
+          Data: H4sIAGQ38mkC/yWOwQrCMBBEf2XNvURv0saAaD1qES8eV7NpA2lSki20f2/UywwMj+Gpzfl2ejy7FgYevVb/fEWzQubV00HYGLiyODq/1hlDrjIlZxumhSv0rg/1mwJTaiY0xoW+3m+nRZSnne6wJ7hGhkucg1GyTGrSCmFIZA9CCn0nnlMAjtB2R+hiYvRKolaycPKrUern9AE5W/D3qQAAAA==
+
+  # ===================== SNS (Optional) =====================
+
+  ReviewNotificationTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasNotificationEmail
+    Properties:
+      TopicName: !Sub '${ProjectName}-notifications'
+
+  ReviewNotificationSub:
+    Type: AWS::SNS::Subscription
+    Condition: HasNotificationEmail
+    Properties:
+      TopicArn: !Ref ReviewNotificationTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+Outputs:
+  ApiUrl:
+    Description: Base API Gateway URL
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+
+  WebsiteUrl:
+    Description: Citizen Upload Portal URL (CloudFront)
+    Value: !Sub 'https://${CloudFrontDistribution.DomainName}'
+
+  CloudFrontDistributionId:
+    Description: CloudFront Distribution ID (for cache invalidation)
+    Value: !Ref CloudFrontDistribution
+
+  DocumentsBucketName:
+    Description: S3 bucket holding uploaded compliance documents
+    Value: !Ref DocumentsBucket
+
+  WebsiteBucketName:
+    Description: S3 bucket hosting the web portal
+    Value: !Ref WebsiteBucket
